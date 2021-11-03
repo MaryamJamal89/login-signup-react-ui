@@ -1,13 +1,18 @@
 import { Component } from "react";
 import axios from "axios";
+import { Alert } from "bootstrap";
 
 export default class Login extends Component {
-  constructor() {
-    super();
+  constructor(props) {
+    super(props);
     this.state = {
       email: "",
       password: "",
       rememberMe: false,
+      errors: {
+        email: "",
+        password: "",
+      },
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -18,30 +23,65 @@ export default class Login extends Component {
     type === "checkbox"
       ? this.setState({ [name]: checked })
       : this.setState({ [name]: value });
+
+    let errors = this.state.errors;
+    const validEmailRegex = RegExp(
+      /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i
+    );
+    switch (name) {
+      case "email":
+        errors.email = validEmailRegex.test(value) ? "" : "Email is not valid!";
+        break;
+      case "password":
+        errors.password =
+          value.length < 8 ? "Password must be 8 characters long!" : "";
+        break;
+      default:
+        break;
+    }
+
+    this.setState({ errors, [name]: value }, () => {
+      console.info(errors);
+    });
   }
 
   async handleSubmit(event) {
     event.preventDefault();
 
-    const user = {
-      email: this.state.email,
-      password: this.state.password,
+    const validateForm = (errors) => {
+      let valid = true;
+      Object.values(errors).forEach(
+        // if we have an error string set valid to false
+        (val) => val.length > 0 && (valid = false)
+      );
+      return valid;
     };
 
-    const response = await axios
-      .post(`https://reqres.in/api/login`, user)
-      .then(function (response) {
-        if (response.status === 200) {
-          console.log("Login successful. Redirecting to home page..");
-          window.location.href = "./home-page";
-        } else {
-          console.error("Username does not exists");
-        }
-      })
-      .catch((error) => {
-        this.setState({ errorMessage: error.message });
-        console.error("There was an error!", error);
-      });
+    if (validateForm(this.state.errors)) {
+      console.info("Valid Form");
+
+      const user = {
+        email: this.state.email,
+        password: this.state.password,
+      };
+
+      const response = await axios
+        .post(`https://reqres.in/api/login`, user)
+        .then(function (response) {
+          if (response.status === 200) {
+            console.info("Login successful. Redirecting to home page..");
+            window.location.href = "./home-page";
+          }
+        })
+        .catch((error) => {
+          this.setState({ errorMessage: error.message });
+          console.error("There was an error!", error);
+          //show mssg for user
+        });
+    } else {
+      console.error("Invalid Form");
+      //show mssg for user
+    }
   }
 
   render() {
